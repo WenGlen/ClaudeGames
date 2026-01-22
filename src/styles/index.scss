@@ -1,0 +1,84 @@
+@use 'GlenTools' ;
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+
+//================================
+// 預設變數
+//================================
+
+:root {
+   // 背景色
+   --color-bg: hsl(190, 10%, 85%);
+   --color-bg-75: color-mix(in srgb, var(--color-bg) 75%, transparent);
+   --color-bg-50: color-mix(in srgb, var(--color-bg) 50%, transparent);
+   --color-bg-25: color-mix(in srgb, var(--color-bg) 25%, transparent);
+
+   --color-primary: hsl(40, 60%, 60%);
+   --color-primary-75: color-mix(in srgb, var(--color-primary) 75%, transparent);
+   --color-primary-50: color-mix(in srgb, var(--color-primary) 50%, transparent);
+   --color-primary-25: color-mix(in srgb, var(--color-primary) 25%, transparent);
+
+   --color-card: hsl(0, 0%, 95%);
+   --color-card-hover: hsl(0, 0%, 70%);
+   --color-card-75: color-mix(in srgb, var(--color-card) 75%, transparent);
+   --color-card-50: color-mix(in srgb, var(--color-card) 50%, transparent);
+   --color-card-25: color-mix(in srgb, var(--color-card) 25%, transparent);
+
+   --color-panel: hsl(200, 20%,90%);
+   --color-panel-muted: hsl(200, 20%, 80%);
+   --color-panel-75: color-mix(in srgb, var(--color-panel) 75%, transparent);
+   --color-panel-50: color-mix(in srgb, var(--color-panel) 50%, transparent);
+   --color-panel-25: color-mix(in srgb, var(--color-panel) 25%, transparent);
+
+   --color-border: hsl(200, 20%, 60%);
+   --color-border-75: color-mix(in srgb, var(--color-border) 75%, transparent);
+   --color-border-50: color-mix(in srgb, var(--color-border) 50%, transparent);
+   --color-border-25: color-mix(in srgb, var(--color-border) 25%, transparent);
+
+
+   // 按鈕 
+   --color-btn: hsl(205, 50%, 30%);
+   --color-btn-text: hsl(205, 20%, 90%);
+   --color-btn-hover: hsl(205, 60%, 35%);
+   --color-btn-focus: hsl(195, 70%, 40%);
+
+   --color-btn-sub: hsl(205, 30%, 80%);
+   --color-btn-sub-text: hsl(200, 20%, 30%);
+   --color-btn-sub-hover: hsl(200, 35%, 70%);
+   --color-btn-sub-focus: hsl(200, 35%, 40%);
+   --color-btn-sub-focus-mode: hsl(200, 35%, 50%);
+   --color-btn-sub-focus-mode-text: hsl(200, 20%, 95%);
+
+   --color-btn-emphasized: hsl(35, 80%, 32%);
+   --color-btn-emphasized-text: hsl(35, 20%, 90%);
+   --color-btn-emphasized-hover: hsl(40, 100%, 40%);
+   --color-btn-emphasized-focus: hsl(35, 100%, 40%);
+
+   // 文字顏色
+   --color-text-default: hsl(200, 20%, 30%);
+   --color-text-muted: hsl(200, 15%, 50%);
+   --color-text-sub: hsl(200, 10%, 60%);
+   --color-text-emphasized: hsl(0, 0%, 10%);
+   --color-text-placeholder: hsl(0, 0%, 50%);
+
+   --color-text-primary: hsl(40, 60%, 60%);
+   --color-text-primary-muted: hsl(40, 60%, 60%);
+   --color-text-primary-strong: hsl(40, 60%, 60%);
+   --color-text-primary-hover: hsl(40, 60%, 60%);
+   --color-text-primary-25: color-mix(in srgb, var(--color-text-primary) 25%, transparent);
+   --color-text-primary-50: color-mix(in srgb, var(--color-text-primary) 50%, transparent);
+   --color-text-primary-75: color-mix(in srgb, var(--color-text-primary) 75%, transparent);
+
+   --color-text-error: hsl(340, 100%, 60%);
+   --color-text-success: hsl(80, 100%, 70%);
+
+   --color-test: hsl(340, 40%, 70%);
+   --color-test2: hsl(150, 40%, 70%);
+}
+
+//================================  

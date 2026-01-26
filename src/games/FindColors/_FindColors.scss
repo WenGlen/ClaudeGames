@@ -8,7 +8,7 @@
     max-height: 80vh;
     padding: 1rem;
     overflow: hidden;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    //background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     color: #fff;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     box-sizing: border-box;
@@ -113,14 +113,18 @@
         transition: all 0.15s ease;
         padding: 0;
         outline: none;
+        -webkit-tap-highlight-color: transparent;
 
-        &:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
-        }
+        // 只在支援 hover 的設備（桌面）上顯示 hover 效果
+        @media (hover: hover) {
+            &:hover {
+                transform: scale(1.05);
+                box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+            }
 
-        &:active {
-            transform: scale(0.95);
+            &:active {
+                transform: scale(0.95);
+            }
         }
 
         &.is-wrong {
@@ -129,11 +133,6 @@
 
         &:disabled {
             cursor: default;
-
-            &:hover {
-                transform: none;
-                box-shadow: none;
-            }
         }
     }
 

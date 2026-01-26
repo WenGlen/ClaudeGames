@@ -48,6 +48,11 @@ const CONFIG = {
         { maxLevel: Infinity, min: 3, max: 9 },
     ],
 
+    // 干擾色之間的最小差異（前 10 關要求較高，之後可重複）
+    MIN_DISTRACTOR_DIFF_EARLY: 25,   // 1-10 關
+    MIN_DISTRACTOR_DIFF_LATE: 0,     // 11+ 關（允許重複）
+    DISTRACTOR_DIFF_THRESHOLD: 10,   // 從第幾關開始允許重複
+
     // 時間設定
     INITIAL_TIME: 10,
     WRONG_PENALTY: 5,
@@ -134,19 +139,29 @@ const generateTargetColor = (): RGB => {
 /**
  * 生成干擾色
  * @param target - 目標顏色
- * @param targetDeltaE - 目標色差值範圍
+ * @param existingColors - 已生成的顏色（用於檢查重複）
+ * @param minDeltaE - 與目標的最小色差
+ * @param maxDeltaE - 與目標的最大色差
+ * @param minDistractorDiff - 干擾色之間的最小色差（避免重複）
  */
-const generateDistractorColor = (target: RGB, minDeltaE: number, maxDeltaE: number): RGB => {
+const generateDistractorColor = (
+    target: RGB,
+    existingColors: RGB[],
+    minDeltaE: number,
+    maxDeltaE: number,
+    minDistractorDiff: number
+): RGB => {
     const targetLab = rgbToLab(target);
+    const existingLabs = existingColors.map(c => rgbToLab(c));
     let attempts = 0;
-    const maxAttempts = 100;
+    const maxAttempts = 200;
 
     while (attempts < maxAttempts) {
         // 隨機偏移
         const offset = {
-            r: Math.floor(Math.random() * 60) - 30,
-            g: Math.floor(Math.random() * 60) - 30,
-            b: Math.floor(Math.random() * 60) - 30,
+            r: Math.floor(Math.random() * 80) - 40,
+            g: Math.floor(Math.random() * 80) - 40,
+            b: Math.floor(Math.random() * 80) - 40,
         };
 
         const newColor: RGB = {
@@ -156,20 +171,37 @@ const generateDistractorColor = (target: RGB, minDeltaE: number, maxDeltaE: numb
         };
 
         const newLab = rgbToLab(newColor);
-        const diff = deltaE(targetLab, newLab);
+        const diffFromTarget = deltaE(targetLab, newLab);
 
-        if (diff >= minDeltaE && diff <= maxDeltaE) {
+        // 檢查與目標的色差
+        if (diffFromTarget < minDeltaE || diffFromTarget > maxDeltaE) {
+            attempts++;
+            continue;
+        }
+
+        // 檢查與已有干擾色的色差（確保不重複）
+        let tooSimilar = false;
+        for (const existingLab of existingLabs) {
+            if (deltaE(newLab, existingLab) < minDistractorDiff) {
+                tooSimilar = true;
+                break;
+            }
+        }
+
+        if (!tooSimilar) {
             return newColor;
         }
 
         attempts++;
     }
 
-    // 如果找不到合適的顏色，返回一個稍微不同的顏色
+    // 如果找不到合適的顏色，返回一個隨機偏移的顏色
+    const angle = Math.random() * Math.PI * 2;
+    const distance = minDeltaE + Math.random() * (maxDeltaE - minDeltaE);
     return {
-        r: Math.max(0, Math.min(255, target.r + (Math.random() > 0.5 ? minDeltaE : -minDeltaE))),
-        g: Math.max(0, Math.min(255, target.g + (Math.random() > 0.5 ? minDeltaE : -minDeltaE))),
-        b: Math.max(0, Math.min(255, target.b + (Math.random() > 0.5 ? minDeltaE : -minDeltaE))),
+        r: Math.max(0, Math.min(255, Math.round(target.r + Math.cos(angle) * distance))),
+        g: Math.max(0, Math.min(255, Math.round(target.g + Math.sin(angle) * distance))),
+        b: Math.max(0, Math.min(255, Math.round(target.b + Math.cos(angle + Math.PI / 3) * distance))),
     };
 };
 
@@ -234,10 +266,10 @@ export default function FindColors() {
     // States
     const [gameStatus, setGameStatus] = useState<GameStatus>('idle');
     const [level, setLevel] = useState(1);
-    const [timeLeft, setTimeLeft] = useState(CONFIG.INITIAL_TIME);
+    const [timeLeft, setTimeLeft] = useState<number>(CONFIG.INITIAL_TIME);
     const [targetColor, setTargetColor] = useState<RGB>({ r: 128, g: 128, b: 128 });
     const [options, setOptions] = useState<ColorOption[]>([]);
-    const [optionSize, setOptionSize] = useState(CONFIG.OPTION_SIZE_MAX);
+    const [optionSize, setOptionSize] = useState<number>(CONFIG.OPTION_SIZE_MAX);
     const [showPenalty, setShowPenalty] = useState(false);
     const [wrongOptionId, setWrongOptionId] = useState<number | null>(null);
     const [highestLevel, setHighestLevel] = useState(() => {
@@ -272,14 +304,24 @@ export default function FindColors() {
         const optionCount = getOptionCount(currentLevel);
         const { min, max } = getDeltaERange(currentLevel);
 
+        // 決定干擾色之間的最小差異
+        const minDistractorDiff = currentLevel <= CONFIG.DISTRACTOR_DIFF_THRESHOLD
+            ? CONFIG.MIN_DISTRACTOR_DIFF_EARLY
+            : CONFIG.MIN_DISTRACTOR_DIFF_LATE;
+
         const newOptions: ColorOption[] = [
             { id: 0, color: target, isTarget: true },
         ];
 
+        // 收集已生成的干擾色
+        const distractorColors: RGB[] = [];
+
         for (let i = 1; i < optionCount; i++) {
+            const distractor = generateDistractorColor(target, distractorColors, min, max, minDistractorDiff);
+            distractorColors.push(distractor);
             newOptions.push({
                 id: i,
-                color: generateDistractorColor(target, min, max),
+                color: distractor,
                 isTarget: false,
             });
         }

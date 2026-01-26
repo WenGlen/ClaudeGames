@@ -1,5 +1,5 @@
 
-import { Outlet } from "react-router-dom";
+import { Outlet, Link , useLocation} from "react-router-dom";
 interface MainLayoutProps {
     headerNavItems: { label: string; path: string }[];
 }
@@ -9,22 +9,28 @@ export default function MainLayout({
 
     headerNavItems 
 
+
 }: MainLayoutProps) {   
     
+    const location = useLocation();
+
     return (
         <div className="h-screen w-screen flex flex-col" >
 
             <div className="w-full 
                             bg-panel text-center flex-row-between-center
-                            px-4 py-2" >
-                <a href="/" >
-                    Logo
-                </a>
-                <div className="flex-row-center gap-4" >
+                            px-12 py-2" >
+                <Link to="/" >
+                    <img src="public/ClaudeGame_logo.png" alt="ClaudeGame Logo" 
+                         className="h-10 w-auto"/>
+                </Link>
+                <div className="flex-row-center gap-6 text-lg" >
                 {headerNavItems.map((item) => (
-                    <a key={item.path} href={item.path} >
-                        {item.label}
-                    </a>
+                    <Link key={item.path} to={item.path} >
+                        <div className={`bg-btn px-4 py-1 rounded hover:bg-btn-hover ${location.pathname === item.path ? "bg-primary text-white hover:bg-primary" : "" }`} >
+                            {item.label}
+                        </div>
+                    </Link>
                 ))}
                 </div>
             </div>
@@ -35,8 +41,10 @@ export default function MainLayout({
                 </div>
             </div>
 
-            <div className="h-8 w-full bg-panel text-center" >
-                footer
+            <div className="h-8 w-full bg-panel flex-row-between-center
+                            px-12 py-2 text-center text-sub" >
+                <div>v 1.1</div>
+                <div>dev by Glen use Claude</div>
             </div>
 
         </div>

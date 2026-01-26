@@ -5,9 +5,11 @@ import './styles/index.scss'
 
 import App from './App.tsx'
 
+const basename = import.meta.env.PROD ? '/ClaudeGames/' : ''
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <App />
     </BrowserRouter>
   </StrictMode>,

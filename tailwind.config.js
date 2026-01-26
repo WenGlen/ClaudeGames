@@ -42,6 +42,12 @@ export default {
             '50': 'var(--color-border-50)',
             '75': 'var(--color-border-75)',
         },
+        btn: {
+            DEFAULT: 'var(--color-btn)',
+            hover: 'var(--color-btn-hover)',
+            active: 'var(--color-btn-active)',
+            disabled: 'var(--color-btn-disabled)',
+        },
         // Text 顏色系列
         textDefaultColor: 'var(--color-text-default)',
         muted: 'var(--color-text-muted)',

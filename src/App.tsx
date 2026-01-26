@@ -1,16 +1,18 @@
-import { useState } from 'react'
+
 import { Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from './components/layouts/MainLayout'
 import HomePage from './pages/HomePage';
 import Snake from './games/Snake/Snake';
 import FindColors from './games/FindColors/FindColors';
+import GoForward from "./games/GoForward/GoForward";
 
 
 
 function App() {
   const headerNavItems = [
       { label: "貪食蛇", path: "/snake", game: Snake },
-      { label: "看色", path: "/find-colors", game: FindColors }
+      { label: "看色", path: "/find-colors", game: FindColors },
+      { label: "向前走", path: "/go-forward", game: GoForward }
   ];
 
   return (

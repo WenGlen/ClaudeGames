@@ -104,6 +104,26 @@ export default function Snake() {
     }, []);
 
     /**
+     * 處理方向變更（供觸控按鈕使用）
+     * @param newDirection - 新的方向
+     */
+    const handleDirectionChange = useCallback((newDirection: Direction) => {
+        if (gameStatus !== 'playing') return;
+        const currentDir = directionRef.current;
+
+        // 防止反向移動
+        const isValid =
+            (newDirection === 'UP' && currentDir !== 'DOWN') ||
+            (newDirection === 'DOWN' && currentDir !== 'UP') ||
+            (newDirection === 'LEFT' && currentDir !== 'RIGHT') ||
+            (newDirection === 'RIGHT' && currentDir !== 'LEFT');
+
+        if (isValid) {
+            nextDirectionRef.current = newDirection;
+        }
+    }, [gameStatus]);
+
+    /**
      * 繪製遊戲畫面
      */
     const draw = useCallback((ctx: CanvasRenderingContext2D, currentSnake: Point[], currentFood: Point) => {
@@ -405,24 +425,10 @@ export default function Snake() {
                 )}
             </div>
 
-            <div className="controls">
+            {/* 桌面版：鍵盤操作說明 */}
+            <div className="controls controls--desktop">
                 <p className="controls-title">操作方式</p>
-
                 <div className="controls-container">
-
-                    <div>
-                        <div className="controls-grid">
-                            <span className="key">W</span>
-                        </div>
-                        <div className="controls-grid">
-                            <span className="key">A</span>
-                            <span className="key">S</span>
-                            <span className="key">D</span>
-                        </div>
-                    </div>
-
-                    <div className="key-separator">或</div>
-
                     <div>
                         <div className="controls-grid">
                             <span className="key">↑</span>
@@ -433,10 +439,47 @@ export default function Snake() {
                             <span className="key">→</span>
                         </div>
                     </div>
-
                 </div>
-
                 <p className="controls-hint">按空白鍵暫停</p>
+            </div>
+
+            {/* 手機版：觸控方向按鈕 */}
+            <div className="touch-controls">
+                <div className="touch-controls-row">
+                    <button
+                        className="touch-btn"
+                        onClick={() => handleDirectionChange('UP')}
+                        aria-label="向上"
+                    >
+                        ▲
+                    </button>
+                </div>
+                <div className="touch-controls-row">
+                    <button
+                        className="touch-btn"
+                        onClick={() => handleDirectionChange('LEFT')}
+                        aria-label="向左"
+                    >
+                        ◀
+                    </button>
+                    <button
+                        className="touch-btn"
+                        onClick={() => handleDirectionChange('DOWN')}
+                        aria-label="向下"
+                    >
+                        ▼
+                    </button>
+                    <button
+                        className="touch-btn"
+                        onClick={() => handleDirectionChange('RIGHT')}
+                        aria-label="向右"
+                    >
+                        ▶
+                    </button>
+                </div>
+                <button className="touch-btn touch-btn--pause" onClick={togglePause}>
+                    {gameStatus === 'playing' ? '暫停' : '繼續'}
+                </button>
             </div>
         </div>
     );

@@ -17,17 +17,17 @@ export default function MainLayout({
     return (
         <div className="h-screen w-screen flex flex-col" >
 
-            <div className="w-full 
+            <div className="w-full
                             bg-panel text-center flex-row-between-center
-                            px-12 py-2" >
+                            px-3 py-2 sm:px-12" >
                 <Link to="/" >
-                    <img src="public/ClaudeGame_logo.png" alt="ClaudeGame Logo" 
-                         className="h-10 w-auto"/>
+                    <img src={`${import.meta.env.BASE_URL}ClaudeGame_logo.png`} alt="ClaudeGame Logo"
+                         className="h-8 w-auto sm:h-10"/>
                 </Link>
-                <div className="flex-row-center gap-6 text-lg" >
+                <div className="flex-row-center gap-2 text-sm sm:gap-6 sm:text-lg" >
                 {headerNavItems.map((item) => (
                     <Link key={item.path} to={item.path} >
-                        <div className={`bg-btn px-4 py-1 rounded hover:bg-btn-hover ${location.pathname === item.path ? "bg-primary text-white hover:bg-primary" : "" }`} >
+                        <div className={`bg-btn px-2 py-1 rounded hover:bg-btn-hover sm:px-4 ${location.pathname === item.path ? "bg-primary text-white hover:bg-primary" : "" }`} >
                             {item.label}
                         </div>
                     </Link>
@@ -35,15 +35,15 @@ export default function MainLayout({
                 </div>
             </div>
             
-            <div className="flex-1 flex" /*撐滿容器*/ >
+            <div className="flex-1 flex overflow-auto" /*撐滿容器*/ >
                 <div className="mx-auto my-auto" >
                     <Outlet />
                 </div>
             </div>
 
-            <div className="h-8 w-full bg-panel flex-row-between-center
-                            px-12 py-2 text-center text-sub" >
-                <div>v 1.2</div>
+            <div className="w-full bg-panel flex-row-between-center shrink-0
+                            px-4 py-2 text-center text-sub text-xs sm:px-12 sm:text-sm" >
+                <div>v 1.3</div>
                 <div>dev by Glen use Claude</div>
             </div>
 

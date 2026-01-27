@@ -43,7 +43,7 @@ export default function MainLayout({
 
             <div className="h-8 w-full bg-panel flex-row-between-center
                             px-12 py-2 text-center text-sub" >
-                <div>v 1.1</div>
+                <div>v 1.2</div>
                 <div>dev by Glen use Claude</div>
             </div>
 

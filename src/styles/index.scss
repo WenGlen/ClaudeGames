@@ -88,3 +88,35 @@ body{
    background-color: var(--color-bg);
    color: var(--color-text-default);
 }
+
+//================================
+.HomePage{
+   h2{
+      margin-top: 20px;
+      margin-bottom: 10px;
+      font-size: 2rem;
+      color: var(--color-text-muted);
+   }
+
+   button{
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 1.2rem;
+      background-color: var(--color-btn);
+      color: var(--color-btn-text);
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+
+      &:hover{
+         background-color: var(--color-btn-hover);
+      }
+
+      &:focus{
+         outline: 2px solid var(--color-btn-focus);
+         outline-offset: 2px;
+      }
+   }
+
+}

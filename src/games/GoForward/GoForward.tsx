@@ -287,9 +287,11 @@ export default function GoForward() {
         while (lastPlatformEndRef.current < viewRight + CONFIG.CANVAS_WIDTH) {
             const platforms = platformsRef.current;
             const lastStandable = lastStandableRef.current;
+            const lastPlatform = platforms[platforms.length - 1];
+            const lastWasFake = lastPlatform?.type === 'fake';
 
-            // 【修正】使用最後可站立平台的高度作為基準，而不是最後一個平台（可能是 fake/ceiling）
-            let baseY = lastStandable.y;
+            // 使用最後可站立平台的高度作為基準
+            const baseY = lastStandable.y;
 
             // 根據距離增加難度
             const distance = maxDistanceRef.current;
@@ -300,7 +302,15 @@ export default function GoForward() {
             const maxGap = CONFIG.GAP_MAX_WIDTH + Math.floor(difficultyFactor * 2);
             const gapWidth = CONFIG.TILE_SIZE * (minGap + Math.floor(Math.random() * (maxGap - minGap + 1)));
 
-            const currentX = lastPlatformEndRef.current + gapWidth;
+            // 【關鍵修正】如果上一個是 fake 平台，這次的位置要從 lastStandable 計算
+            // 確保玩家能從最後一個可站立平台跳到這個平台
+            let currentX: number;
+            if (lastWasFake) {
+                // fake 平台後，位置基於 lastStandable 計算，確保可達
+                currentX = lastStandable.endX + gapWidth;
+            } else {
+                currentX = lastPlatformEndRef.current + gapWidth;
+            }
 
             // 檢查距離最後可站立平台的距離
             const distFromLastStandable = currentX - lastStandable.endX;
@@ -309,8 +319,8 @@ export default function GoForward() {
             let platformType: PlatformType = 'normal';
             const typeRoll = Math.random();
 
-            // 如果距離最後可站立平台太遠，強制生成可站立平台
-            const mustBeStandable = distFromLastStandable > CONFIG.MAX_JUMP_DISTANCE * 0.7;
+            // 如果上一個是 fake，或者距離太遠，強制生成可站立平台
+            const mustBeStandable = lastWasFake || distFromLastStandable > CONFIG.MAX_JUMP_DISTANCE * 0.7;
 
             if (!mustBeStandable) {
                 // 騙人平台（隨難度增加機率）
@@ -324,7 +334,7 @@ export default function GoForward() {
             }
 
             // 高度變化
-            let heightVariation = CONFIG.HEIGHT_VARIATION + Math.floor(difficultyFactor * 1);
+            const heightVariation = CONFIG.HEIGHT_VARIATION + Math.floor(difficultyFactor * 1);
             let currentY = baseY;
 
             // 騙人平台：高度差更大（基於 baseY 計算）
@@ -338,7 +348,7 @@ export default function GoForward() {
                 }
             } else {
                 // 可站立平台：基於 baseY 計算高度變化，確保從最後可站立平台可以跳到
-                let heightChange = Math.floor(Math.random() * (heightVariation * 2 + 1)) - heightVariation;
+                const heightChange = Math.floor(Math.random() * (heightVariation * 2 + 1)) - heightVariation;
                 let proposedY = Math.max(
                     CONFIG.TILE_SIZE * 4,
                     Math.min(CONFIG.CANVAS_HEIGHT - CONFIG.TILE_SIZE * 3, baseY + heightChange * CONFIG.TILE_SIZE)
@@ -387,15 +397,25 @@ export default function GoForward() {
                 };
             }
 
-            // 隧道（限制平台）- 提高機率，放寬條件
-            if (platformType === 'normal' && Math.random() < CONFIG.TUNNEL_CHANCE * 2 + difficultyFactor * 0.12) {
-                const ceilingY = currentY - CONFIG.TILE_SIZE * 2.2;
-                // 放寬條件：只要不會太高就生成
-                if (ceilingY > CONFIG.TILE_SIZE) {
+            // 天花板（限制跳躍高度）- 放在間隙上方
+            // 只在可站立平台後生成，且前一個也是可站立平台
+            if (platformType !== 'fake' && !lastWasFake && Math.random() < CONFIG.TUNNEL_CHANCE + difficultyFactor * 0.08) {
+                // 天花板覆蓋間隙區域
+                const gapStartX = lastStandable.endX;
+                const gapEndX = currentX;
+                const ceilingWidth = gapEndX - gapStartX + CONFIG.TILE_SIZE * 2;
+
+                // 天花板高度：取兩個平台中較高的那個，再往上約 1.5 個玩家高度
+                // 這樣玩家必須用較低的跳躍才能通過
+                const higherPlatformY = Math.min(lastStandable.y, currentY);
+                const ceilingY = higherPlatformY - CONFIG.PLAYER_SIZE * 1.8;
+
+                // 確保天花板不會太高（要能撞到）也不會太低（要能通過）
+                if (ceilingY > CONFIG.TILE_SIZE * 2 && ceilingY < higherPlatformY - CONFIG.PLAYER_SIZE - 10) {
                     platforms.push({
-                        x: currentX - CONFIG.TILE_SIZE,
+                        x: gapStartX - CONFIG.TILE_SIZE,
                         y: ceilingY,
-                        width: platformWidth + CONFIG.TILE_SIZE * 2,
+                        width: ceilingWidth,
                         height: CONFIG.PLATFORM_HEIGHT,
                         type: 'ceiling',
                     });
@@ -715,15 +735,12 @@ export default function GoForward() {
                     ctx.fillStyle = '#354565';
                     ctx.fillRect(screenX, platform.y, platform.width, 3);
                 } else if (platform.type === 'ceiling') {
-                    // 天花板 - 使用更深的顏色和警示條紋
-                    ctx.fillStyle = '#1a2a40';  // 更深的藍色
+                    // 天花板 - 和一般平台相同樣式
+                    ctx.fillStyle = CONFIG.PLATFORM_COLOR;
                     ctx.fillRect(screenX, platform.y, platform.width, platform.height);
-                    // 底部警示條紋（黃黑相間）
-                    const stripeWidth = 8;
-                    for (let i = 0; i < platform.width; i += stripeWidth * 2) {
-                        ctx.fillStyle = '#c9a227';  // 警示黃
-                        ctx.fillRect(screenX + i, platform.y + platform.height - 4, stripeWidth, 4);
-                    }
+                    // 底部亮邊（因為是天花板，亮邊在下方）
+                    ctx.fillStyle = CONFIG.PLATFORM_TOP_COLOR;
+                    ctx.fillRect(screenX, platform.y + platform.height - 3, platform.width, 3);
                 } else {
                     // 一般平台
                     ctx.fillStyle = CONFIG.PLATFORM_COLOR;
@@ -983,13 +1000,25 @@ export default function GoForward() {
 
     /**
      * 手機按鈕事件處理
+     * 使用 TouchEvent 直接處理，避免觸控問題
      */
-    const handleTouchStart = (action: 'left' | 'right' | 'jump') => {
+    const handleTouchStart = (action: 'left' | 'right' | 'jump') => (e: React.TouchEvent) => {
+        e.preventDefault();  // 防止觸控延遲和預設行為
         if (gameStatus !== 'playing') return;
         inputRef.current[action] = true;
     };
 
-    const handleTouchEnd = (action: 'left' | 'right' | 'jump') => {
+    const handleTouchEnd = (action: 'left' | 'right' | 'jump') => (e: React.TouchEvent) => {
+        e.preventDefault();
+        inputRef.current[action] = false;
+    };
+
+    const handleMouseDown = (action: 'left' | 'right' | 'jump') => () => {
+        if (gameStatus !== 'playing') return;
+        inputRef.current[action] = true;
+    };
+
+    const handleMouseUp = (action: 'left' | 'right' | 'jump') => () => {
         inputRef.current[action] = false;
     };
 
@@ -1045,38 +1074,43 @@ export default function GoForward() {
             </div>
 
             <div className="mobile-controls">
+                {/* 跳躍鍵在左邊（左手） */}
+                <button
+                    className="control-btn control-btn--jump"
+                    onTouchStart={handleTouchStart('jump')}
+                    onTouchEnd={handleTouchEnd('jump')}
+                    onTouchCancel={handleTouchEnd('jump')}
+                    onMouseDown={handleMouseDown('jump')}
+                    onMouseUp={handleMouseUp('jump')}
+                    onMouseLeave={handleMouseUp('jump')}
+                >
+                    跳躍
+                </button>
+                {/* 方向鍵在右邊（右手） */}
                 <div className="direction-buttons">
                     <button
                         className="control-btn"
-                        onTouchStart={() => handleTouchStart('left')}
-                        onTouchEnd={() => handleTouchEnd('left')}
-                        onMouseDown={() => handleTouchStart('left')}
-                        onMouseUp={() => handleTouchEnd('left')}
-                        onMouseLeave={() => handleTouchEnd('left')}
+                        onTouchStart={handleTouchStart('left')}
+                        onTouchEnd={handleTouchEnd('left')}
+                        onTouchCancel={handleTouchEnd('left')}
+                        onMouseDown={handleMouseDown('left')}
+                        onMouseUp={handleMouseUp('left')}
+                        onMouseLeave={handleMouseUp('left')}
                     >
                         ←
                     </button>
                     <button
                         className="control-btn"
-                        onTouchStart={() => handleTouchStart('right')}
-                        onTouchEnd={() => handleTouchEnd('right')}
-                        onMouseDown={() => handleTouchStart('right')}
-                        onMouseUp={() => handleTouchEnd('right')}
-                        onMouseLeave={() => handleTouchEnd('right')}
+                        onTouchStart={handleTouchStart('right')}
+                        onTouchEnd={handleTouchEnd('right')}
+                        onTouchCancel={handleTouchEnd('right')}
+                        onMouseDown={handleMouseDown('right')}
+                        onMouseUp={handleMouseUp('right')}
+                        onMouseLeave={handleMouseUp('right')}
                     >
                         →
                     </button>
                 </div>
-                <button
-                    className="control-btn control-btn--jump"
-                    onTouchStart={() => handleTouchStart('jump')}
-                    onTouchEnd={() => handleTouchEnd('jump')}
-                    onMouseDown={() => handleTouchStart('jump')}
-                    onMouseUp={() => handleTouchEnd('jump')}
-                    onMouseLeave={() => handleTouchEnd('jump')}
-                >
-                    跳躍
-                </button>
             </div>
 
             <div className="instructions">

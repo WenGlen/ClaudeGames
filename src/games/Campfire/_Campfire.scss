@@ -1,0 +1,643 @@
+.Campfire {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+    min-height: 100vh;
+    color: #e0e0e0;
+    user-select: none;
+
+    // ==================== 標題 ====================
+    .title {
+        font-size: 2.25rem;
+        color: #ff9d4d;
+        text-shadow: 0 0 15px rgba(255, 157, 77, 0.5);
+        margin-bottom: 0.75rem;
+    }
+
+    // ==================== 遊戲地圖 ====================
+    .game-map {
+        position: relative;
+        width: 600px;
+        height: 675px;
+        background: linear-gradient(180deg, #1a3a4a 0%, #1e4a5a 30%, #2a5a6a 60%, #1a3a4a 100%);
+        border-radius: 18px;
+        overflow: hidden;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+
+        &.cold {
+            box-shadow: inset 0 0 90px rgba(100, 180, 255, 0.4);
+        }
+
+        &.freezing {
+            box-shadow: inset 0 0 150px rgba(100, 180, 255, 0.7);
+            animation: shiver 0.1s infinite;
+        }
+
+        .world {
+            position: absolute;
+            width: 800px;
+            height: 450px;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+
+            &::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background-image:
+                    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+                    radial-gradient(circle at 60% 50%, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+                background-size: 100px 100px;
+                pointer-events: none;
+            }
+        }
+
+        .paths {
+            position: absolute;
+            width: 800px;
+            height: 450px;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+
+            .path-line {
+                stroke: rgba(255, 255, 255, 0.12);
+                stroke-width: 6;
+                stroke-linecap: round;
+                stroke-dasharray: 10 8;
+                fill: none;
+            }
+
+            .range-circle {
+                fill: none;
+                stroke-dasharray: 4 4;
+                stroke-width: 1.5;
+
+                &.warm {
+                    stroke: rgba(255, 160, 50, 0.35);
+                    fill: rgba(255, 140, 30, 0.06);
+                }
+
+                &.tree {
+                    stroke: rgba(34, 180, 34, 0.3);
+                }
+
+                &.lake {
+                    stroke: rgba(100, 180, 255, 0.3);
+                }
+
+                &.campfire {
+                    stroke: rgba(255, 120, 30, 0.25);
+                }
+
+                &.cashier {
+                    stroke: rgba(255, 215, 0, 0.25);
+                }
+
+                &.upgrade {
+                    stroke: rgba(180, 180, 180, 0.25);
+                }
+
+                &.storage {
+                    stroke: rgba(139, 90, 43, 0.35);
+                }
+
+                &.food-storage {
+                    stroke: rgba(255, 140, 50, 0.35);
+                }
+            }
+        }
+
+        // 區域
+        .zone {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+
+            .emoji {
+                font-size: 2.5rem;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            }
+
+            .label {
+                font-size: 0.7rem;
+                color: rgba(255, 255, 255, 0.7);
+                margin-top: 0.2rem;
+                white-space: nowrap;
+            }
+
+            &.lake .emoji {
+                text-shadow: 0 0 15px rgba(135, 206, 235, 0.5);
+            }
+
+            &.campfire {
+                .flame {
+                    animation: flicker 0.5s infinite alternate;
+                }
+
+                .cooking-indicator {
+                    position: absolute;
+                    bottom: -20px;
+                    font-size: 0.8rem;
+                    background: rgba(0, 0, 0, 0.5);
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                }
+
+                &.extinguished .flame {
+                    opacity: 0.3;
+                    animation: none;
+                    filter: grayscale(0.8);
+                }
+            }
+
+            &.cashier .emoji {
+                text-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            }
+        }
+
+        // 置物區（雙圓圈）
+        .storage-zone {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 1;
+
+            .storage-circle {
+                position: absolute;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                transform: translateX(-50%);
+
+                .emoji {
+                    font-size: 1rem;
+                }
+
+                .label {
+                    font-size: 0.4rem;
+                    color: rgba(139, 90, 43, 0.9);
+                    white-space: nowrap;
+                }
+            }
+
+            .storage-count {
+                font-size: 0.6rem;
+                color: rgba(255, 255, 255, 0.8);
+                font-weight: bold;
+                white-space: nowrap;
+            }
+
+            &.food {
+                .storage-circle .label {
+                    color: rgba(255, 160, 80, 0.9);
+                }
+
+                .storage-count {
+                    color: rgba(255, 200, 150, 0.8);
+                }
+            }
+        }
+
+        // 升級點
+        .upgrade-point {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+
+            .emoji {
+                font-size: 1.5rem;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            }
+
+            .level {
+                font-size: 0.45rem;
+                color: #ffd700;
+                white-space: nowrap;
+            }
+
+            &.accelerator .level {
+                color: rgba(100, 200, 100, 0.8);
+            }
+        }
+
+        // 個別樹木
+        .tree {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+
+            .emoji {
+                font-size: 2rem;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+                text-shadow: 0 0 12px rgba(34, 139, 34, 0.4);
+            }
+
+            .harvests-bar {
+                width: 30px;
+                height: 3px;
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 2px;
+                overflow: hidden;
+                margin-top: 2px;
+
+                .fill {
+                    height: 100%;
+                    background: #4ecca3;
+                    border-radius: 2px;
+                    transition: width 0.2s ease;
+                }
+            }
+
+            &.active .emoji {
+                animation: tree-shake 0.3s infinite;
+            }
+        }
+
+        // 內嵌數值條
+        .inline-bar {
+            width: 40px;
+            height: 5px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+
+            .fill {
+                height: 100%;
+                border-radius: 3px;
+                transition: width 0.2s ease;
+            }
+
+            &.fuel .fill {
+                background: linear-gradient(to right, #dc2626, #f97316);
+            }
+
+            &.temp .fill {
+                background: linear-gradient(to right, #3b82f6, #22c55e);
+            }
+
+            &.low {
+                animation: low-pulse 0.6s infinite alternate;
+            }
+        }
+
+        // 玩家
+        .player {
+            position: absolute;
+            font-size: 1.8rem;
+            z-index: 10;
+            transition: left 0.1s ease-out, top 0.1s ease-out;
+            filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.4));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -50%);
+
+            .inline-bar {
+                margin-bottom: 2px;
+            }
+
+            .carried-items {
+                font-size: 0.6rem;
+                margin-top: -2px;
+                line-height: 1;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                max-width: 48px;
+            }
+
+            &.walking {
+                animation: walk-bob 0.3s infinite;
+            }
+
+            &.facing-left,
+            &.facing-up-left,
+            &.facing-down-left {
+                .player-emoji {
+                    display: inline-block;
+                    transform: scaleX(-1);
+                }
+            }
+        }
+    }
+
+    // ==================== 下方欄位 ====================
+    .bottom-bar {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+        width: 100%;
+        max-width: 600px;
+    }
+
+    .inventory {
+        display: flex;
+        gap: 1.5rem;
+        padding: 0.75rem 1.5rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 12px;
+        align-items: center;
+        flex: 1;
+
+        .item {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+
+            .emoji {
+                font-size: 1.8rem;
+            }
+
+            .count {
+                font-weight: bold;
+                min-width: 30px;
+            }
+        }
+
+        .capacity {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-left: auto;
+        }
+    }
+
+    .gold-display {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.75rem 1.5rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 12px;
+
+        .icon {
+            font-size: 1.5rem;
+        }
+
+        .value {
+            font-weight: bold;
+            color: #ffd700;
+            min-width: 48px;
+            text-align: right;
+        }
+    }
+
+    // ==================== 行動指示 ====================
+    .action-indicator {
+        position: fixed;
+        bottom: 240px;
+        left: 30px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-size: 1.3rem;
+
+        .progress-bar {
+            width: 180px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            margin-top: 0.45rem;
+            overflow: hidden;
+
+            .fill {
+                height: 100%;
+                background: #4ecca3;
+                border-radius: 6px;
+                transition: width 0.1s linear;
+            }
+        }
+
+        .cooking-status {
+            margin-top: 0.6rem;
+            padding-top: 0.6rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    }
+
+    // ==================== 搖桿 ====================
+    .joystick {
+        position: fixed;
+        bottom: 40px;
+        right: 40px;
+        touch-action: none;
+
+        .base {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 4px solid rgba(255, 255, 255, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s;
+
+            .handle {
+                width: 75px;
+                height: 75px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.4);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                transition: background 0.2s;
+            }
+        }
+
+        &.active {
+            .base {
+                border-color: rgba(255, 255, 255, 0.5);
+            }
+
+            .handle {
+                background: rgba(255, 255, 255, 0.6);
+            }
+        }
+    }
+
+    // ==================== 升級卡片 ====================
+    .upgrade-card {
+        position: fixed;
+        bottom: 240px;
+        right: 30px;
+        background: rgba(30, 40, 60, 0.95);
+        padding: 1.1rem 1.5rem;
+        border-radius: 15px;
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        z-index: 100;
+        min-width: 240px;
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.6rem;
+
+            .card-icon {
+                font-size: 1.8rem;
+            }
+
+            .card-name {
+                font-weight: bold;
+                font-size: 1.3rem;
+            }
+
+            .card-stars {
+                font-size: 1.05rem;
+                color: #ffd700;
+                margin-left: auto;
+            }
+        }
+
+        .card-desc {
+            font-size: 1.05rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 0.75rem;
+        }
+
+        .card-maxed {
+            font-size: 1.1rem;
+            color: #88cc88;
+            text-align: center;
+            padding: 0.45rem 0;
+        }
+
+        .card-buy {
+            display: block;
+            width: 100%;
+            padding: 0.6rem;
+            border: none;
+            border-radius: 9px;
+            background: #4ecca3;
+            color: #1b1b32;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+
+            &:hover:not(:disabled) {
+                background: #3db892;
+                transform: translateY(-1px);
+            }
+
+            &:disabled {
+                background: rgba(255, 255, 255, 0.2);
+                color: rgba(255, 255, 255, 0.4);
+                cursor: not-allowed;
+            }
+        }
+    }
+
+    // ==================== 覆蓋層 ====================
+    .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+
+        .panel {
+            background: linear-gradient(180deg, #1e3a5f, #1a2a4a);
+            padding: 3rem;
+            border-radius: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            max-width: 480px;
+
+            h2 {
+                font-size: 2.25rem;
+                margin-bottom: 1.5rem;
+                color: #7dd3fc;
+            }
+
+            .instructions {
+                text-align: left;
+                margin-bottom: 2.25rem;
+
+                p {
+                    margin: 0.75rem 0;
+                    font-size: 1.35rem;
+                    color: rgba(255, 255, 255, 0.8);
+                }
+            }
+
+            .stats {
+                margin-bottom: 2.25rem;
+
+                p {
+                    margin: 0.75rem 0;
+                    font-size: 1.5rem;
+                }
+            }
+
+            .start-btn {
+                padding: 1.2rem 3rem;
+                border: none;
+                border-radius: 12px;
+                background: linear-gradient(180deg, #ff9d4d, #ff7b25);
+                color: #1b1b32;
+                font-size: 1.65rem;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.2s;
+
+                &:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(255, 157, 77, 0.4);
+                }
+
+                &:active {
+                    transform: translateY(0);
+                }
+            }
+        }
+
+        &.gameover .panel h2 {
+            color: #93c5fd;
+        }
+    }
+}
+
+// ==================== 動畫 ====================
+@keyframes flicker {
+    0% { transform: scale(1) rotate(-2deg); opacity: 1; }
+    100% { transform: scale(1.1) rotate(2deg); opacity: 0.85; }
+}
+
+@keyframes walk-bob {
+    0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+    50% { transform: translate(-50%, -50%) translateY(-4px); }
+}
+
+@keyframes shiver {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
+@keyframes low-pulse {
+    0% { opacity: 1; }
+    100% { opacity: 0.4; }
+}
+
+@keyframes tree-shake {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-3deg); }
+    75% { transform: rotate(3deg); }
+}

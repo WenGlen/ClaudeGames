@@ -8,10 +8,117 @@
     max-height: 80vh;
     padding: 1rem;
     overflow: hidden;
-    //background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    color: #fff;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     box-sizing: border-box;
+    position: relative;
+
+    .audio-controls {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        gap: 0.5rem;
+        z-index: 20;
+    }
+
+    .audio-control-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+        color: #888;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s, color 0.2s;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #ccc;
+        }
+
+        &.is-on {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .audio-control-icon {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .audio-control-label {
+            font-size: 0.7rem;
+        }
+    }
+
+    &--bg-black {
+        background: #0f0f12;
+        color: #fff;
+    }
+
+    &--bg-white {
+        background: #f5f5f7;
+        color: #1a1a1a;
+
+        .status-item {
+            background: rgba(0, 0, 0, 0.06);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+        .title { color: #c41e3a; text-shadow: 0 0 20px rgba(196, 30, 58, 0.35); }
+        .status-value { color: #c41e3a; }
+        .answer-area, .target-area { background: rgba(0, 0, 0, 0.08); }
+        .overlay { background: rgba(0, 0, 0, 0.9); }
+        .overlay-text, .overlay-rules p { color: #555; }
+        .controls-title { color: #666; }
+        .controls-text, .controls-hint { color: #666; }
+        .toggle-label { color: #555; }
+        .difficulty-toggles { border-top-color: rgba(0, 0, 0, 0.12); }
+        .toggle-btn { background: rgba(0, 0, 0, 0.1); color: #333; border-color: rgba(0, 0, 0, 0.15); }
+        .toggle-btn.is-active { background: #6b6b73; color: #fff; border-color: #6b6b73; }
+        .status-item--time.is-low-time {
+            border-color: rgba(200, 120, 0, 0.4);
+            background: rgba(255, 180, 80, 0.12);
+            .status-value { color: #c87800; }
+        }
+        .audio-control-btn {
+            color: #666;
+            background: rgba(0, 0, 0, 0.06);
+            border-color: rgba(0, 0, 0, 0.12);
+            &:hover { background: rgba(0, 0, 0, 0.1); color: #333; }
+            &.is-on { color: #1a1a1a; background: rgba(0, 0, 0, 0.12); border-color: rgba(0, 0, 0, 0.2); }
+        }
+    }
+
+    &--bg-gray {
+        background: #4a4a52;
+        color: #fff;
+
+        .status-item {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .answer-area, .target-area { background: rgba(0, 0, 0, 0.2); }
+        .overlay { background: rgba(0, 0, 0, 0.85); }
+        .toggle-label { color: #ddd; }
+        .toggle-btn { background: rgba(255, 255, 255, 0.1); color: #eee; border-color: rgba(255, 255, 255, 0.2); }
+        .toggle-btn.is-active { background: #5c5c64; color: #fff; border-color: #5c5c64; }
+        .status-item--time.is-low-time {
+            border-color: rgba(255, 180, 80, 0.4);
+            background: rgba(255, 180, 80, 0.1);
+            .status-value { color: #ffb350; }
+        }
+        .audio-control-btn {
+            color: #aaa;
+            background: rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.15);
+            &:hover { color: #ddd; background: rgba(0, 0, 0, 0.25); }
+            &.is-on { color: #fff; background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.3); }
+        }
+    }
 
     .title {
         margin: 0 0 0.5rem;
@@ -47,6 +154,17 @@
 
                 .status-value {
                     color: #ff6b6b;
+                }
+            }
+
+            // 剩餘 ≤5 秒：數字震動提醒
+            &.is-low-time {
+                border-color: rgba(255, 180, 80, 0.5);
+                background: rgba(255, 180, 80, 0.08);
+
+                .status-value {
+                    color: #ffb350;
+                    animation: countdownVibrate 0.5s ease-in-out infinite;
                 }
             }
         }
@@ -264,6 +382,56 @@
         font-size: 0.7rem;
         color: #555;
     }
+
+    .difficulty-toggles {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem 1.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
+        max-width: 600px;
+    }
+
+    .toggle-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .toggle-label {
+        font-size: 0.75rem;
+        color: #888;
+        min-width: 4.5em;
+    }
+
+    .toggle-buttons {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .toggle-btn {
+        padding: 0.35rem 0.65rem;
+        font-size: 0.8rem;
+        color: #ccc;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s, color 0.2s;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        &.is-active {
+            background: #5c5c64;
+            color: #fff;
+            border-color: #5c5c64;
+        }
+    }
 }
 
 @keyframes shake {
@@ -281,6 +449,39 @@
     }
     80% {
         transform: translateX(5px);
+    }
+}
+
+@keyframes countdownVibrate {
+    0%, 100% {
+        transform: translate(0, 0);
+    }
+    10% {
+        transform: translate(-2px, -1px);
+    }
+    20% {
+        transform: translate(2px, 1px);
+    }
+    30% {
+        transform: translate(-1px, 2px);
+    }
+    40% {
+        transform: translate(1px, -2px);
+    }
+    50% {
+        transform: translate(-2px, 1px);
+    }
+    60% {
+        transform: translate(2px, -1px);
+    }
+    70% {
+        transform: translate(-1px, -1px);
+    }
+    80% {
+        transform: translate(1px, 1px);
+    }
+    90% {
+        transform: translate(-1px, 1px);
     }
 }
 

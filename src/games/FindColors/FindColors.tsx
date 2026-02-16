@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import './_FindColors.scss';
+import correctSoundUrl from './Duolingo Correct.mp3';
 
 /** 遊戲狀態 */
 type GameStatus = 'idle' | 'playing' | 'paused' | 'gameover';
@@ -45,7 +46,7 @@ const CONFIG = {
         { maxLevel: 10, min: 30, max: 45 },
         { maxLevel: 15, min: 15, max: 30 },
         { maxLevel: 20, min: 9, max: 15 },
-        { maxLevel: Infinity, min: 3, max: 9 },
+        { maxLevel: Infinity, min: 6, max: 12 },
     ],
 
     // 干擾色之間的最小差異（前 10 關要求較高，之後可重複）
@@ -59,6 +60,149 @@ const CONFIG = {
     BASE_TIME_REWARD: 5,
     REWARD_INCREMENT_INTERVAL: 5,
 } as const;
+
+/**
+ * 音效與背景音樂（Web Audio API，無需外部音檔）
+ */
+let audioContext: AudioContext | null = null;
+
+const getAudioContext = (): AudioContext | null => {
+    if (typeof window === 'undefined') return null;
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    return audioContext;
+};
+
+const resumeAudio = (ctx: AudioContext, onResumed?: () => void) => {
+    if (ctx.state === 'suspended') {
+        ctx.resume().then(onResumed);
+    } else {
+        onResumed?.();
+    }
+};
+
+const CORRECT_SOUND_URL = correctSoundUrl;
+
+/** 答對音效：使用 MP3，失敗時改為合成音 */
+const playCorrectSound = (ctx: AudioContext) => {
+    const playFallback = () => {
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 698.46;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.22, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+        osc.start(t);
+        osc.stop(t + 0.38);
+    };
+
+    const audio = new Audio(CORRECT_SOUND_URL);
+    audio.volume = 0.8;
+    audio.onerror = playFallback;
+    audio.addEventListener('loadedmetadata', () => {
+        audio.currentTime = 0.5;
+        audio.play().catch(playFallback);
+    }, { once: true });
+    audio.load();
+};
+
+/** 播放答錯音效（兩聲短低音） */
+const playWrongSound = (ctx: AudioContext) => {
+    const t = ctx.currentTime;
+    const play = (freq: number, start: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'triangle';
+        gain.gain.setValueAtTime(0.2, t + start);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + start + 0.12);
+        osc.start(t + start);
+        osc.stop(t + start + 0.12);
+    };
+    play(200, 0);
+    play(160, 0.15);
+};
+
+/** 播放遊戲結束音效 */
+const playGameOverSound = (ctx: AudioContext) => {
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 220;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    osc.start(t);
+    osc.stop(t + 0.4);
+};
+
+/** 播放倒數滴聲（最後五秒每秒一聲） */
+const playTickSound = (ctx: AudioContext) => {
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 440;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    osc.start(t);
+    osc.stop(t + 0.08);
+};
+
+/** 背景音樂：較豐富的旋律循環（C 大調，16 音） */
+const BGM_NOTES = [
+    262, 330, 392, 440, 392, 330, 262, 196, // C4 E4 G4 A4 下行 + G3
+    262, 330, 392, 523, 392, 330, 262, 196, // 上行到 C5 再回
+];
+const BGM_NOTE_DURATION = 0.36;
+const BGM_GAIN = 0.035;
+
+const startBgmLoop = (ctx: AudioContext): { stop: () => void } => {
+    let noteIndex = 0;
+    let timeoutId: number;
+
+    const playNextNote = () => {
+        const freq = BGM_NOTES[noteIndex];
+        noteIndex = (noteIndex + 1) % BGM_NOTES.length;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        const t = ctx.currentTime;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(BGM_GAIN, t + 0.02);
+        gain.gain.setValueAtTime(BGM_GAIN, t + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + BGM_NOTE_DURATION);
+        osc.start(t);
+        osc.stop(t + BGM_NOTE_DURATION);
+    };
+
+    const schedule = () => {
+        playNextNote();
+        timeoutId = window.setTimeout(schedule, BGM_NOTE_DURATION * 1000);
+    };
+
+    schedule();
+
+    return {
+        stop: () => {
+            window.clearTimeout(timeoutId);
+        },
+    };
+};
 
 /**
  * RGB 轉 XYZ 色彩空間
@@ -262,6 +406,7 @@ export default function FindColors() {
     const timerRef = useRef<number | null>(null);
     const timeLeftRef = useRef<number>(CONFIG.INITIAL_TIME);
     const answerAreaRef = useRef<HTMLDivElement>(null);
+    const bgmRef = useRef<{ stop: () => void } | null>(null);
 
     // States
     const [gameStatus, setGameStatus] = useState<GameStatus>('idle');
@@ -277,9 +422,34 @@ export default function FindColors() {
         return saved ? parseInt(saved, 10) : 0;
     });
 
+    // 難易度／視覺開關（僅影響顯示，不影響題目）
+    type BackgroundMode = 'black' | 'white' | 'gray';
+    const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>('black');
+    const [optionRounded, setOptionRounded] = useState(true);
+    const [optionGap, setOptionGap] = useState(true);
+
+    // 音效與背景音樂開關（存 localStorage）
+    const [soundOn, setSoundOn] = useState(() => {
+        const v = localStorage.getItem('findcolors-sound');
+        return v === null ? true : v === '1';
+    });
+    const [musicOn, setMusicOn] = useState(() => {
+        const v = localStorage.getItem('findcolors-music');
+        return v === null ? true : v === '1';
+    });
+
+    const musicOnRef = useRef(musicOn);
+    const gameStatusRef = useRef(gameStatus);
+    const soundOnRef = useRef(soundOn);
+    musicOnRef.current = musicOn;
+    gameStatusRef.current = gameStatus;
+    soundOnRef.current = soundOn;
+
     /**
      * 計算最佳色塊尺寸
      */
+    const gapPx = optionGap ? CONFIG.OPTION_GAP : 0;
+
     const calculateOptionSize = useCallback((optionCount: number): number => {
         if (!answerAreaRef.current) return CONFIG.OPTION_SIZE_MAX;
 
@@ -289,12 +459,12 @@ export default function FindColors() {
         const cols = Math.ceil(Math.sqrt(optionCount));
         const rows = Math.ceil(optionCount / cols);
 
-        const maxByWidth = (containerWidth - (cols + 1) * CONFIG.OPTION_GAP) / cols;
-        const maxByHeight = (containerHeight - (rows + 1) * CONFIG.OPTION_GAP) / rows;
+        const maxByWidth = (containerWidth - (cols + 1) * gapPx) / cols;
+        const maxByHeight = (containerHeight - (rows + 1) * gapPx) / rows;
 
         const size = Math.min(maxByWidth, maxByHeight);
         return Math.max(CONFIG.OPTION_SIZE_MIN, Math.min(CONFIG.OPTION_SIZE_MAX, Math.floor(size)));
-    }, []);
+    }, [gapPx]);
 
     /**
      * 生成關卡選項
@@ -355,6 +525,26 @@ export default function FindColors() {
         setGameStatus(prev => (prev === 'playing' ? 'paused' : 'playing'));
     }, []);
 
+    const toggleSound = useCallback(() => {
+        setSoundOn(prev => {
+            const next = !prev;
+            localStorage.setItem('findcolors-sound', next ? '1' : '0');
+            return next;
+        });
+    }, []);
+
+    const toggleMusic = useCallback(() => {
+        setMusicOn(prev => {
+            const next = !prev;
+            localStorage.setItem('findcolors-music', next ? '1' : '0');
+            if (!next && bgmRef.current) {
+                bgmRef.current.stop();
+                bgmRef.current = null;
+            }
+            return next;
+        });
+    }, []);
+
     /**
      * 處理選項點擊
      */
@@ -362,6 +552,14 @@ export default function FindColors() {
         if (gameStatus !== 'playing') return;
 
         if (option.isTarget) {
+            if (soundOn) {
+                const ctx = getAudioContext();
+                if (ctx) {
+                    resumeAudio(ctx, () => {
+                        playCorrectSound(ctx);
+                    });
+                }
+            }
             // 答對：獲得時間獎勵，進入下一關
             const reward = getTimeReward(level);
             const newTime = timeLeftRef.current + reward;
@@ -379,6 +577,14 @@ export default function FindColors() {
 
             generateLevel(newLevel);
         } else {
+            if (soundOn) {
+                const ctx = getAudioContext();
+                if (ctx) {
+                    resumeAudio(ctx, () => {
+                        playWrongSound(ctx);
+                    });
+                }
+            }
             // 答錯：扣 5 秒
             const newTime = Math.max(0, timeLeftRef.current - CONFIG.WRONG_PENALTY);
             timeLeftRef.current = newTime;
@@ -397,7 +603,7 @@ export default function FindColors() {
                 setGameStatus('gameover');
             }
         }
-    }, [gameStatus, level, highestLevel, generateLevel]);
+    }, [gameStatus, level, highestLevel, generateLevel, soundOn]);
 
     /**
      * 處理鍵盤輸入
@@ -423,6 +629,31 @@ export default function FindColors() {
     }, [gameStatus, startGame, togglePause]);
 
     /**
+     * 背景音樂：僅在 playing 且 musicOn 時播放
+     */
+    useEffect(() => {
+        if (gameStatus !== 'playing' || !musicOn) {
+            if (bgmRef.current) {
+                bgmRef.current.stop();
+                bgmRef.current = null;
+            }
+            return;
+        }
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        resumeAudio(ctx, () => {
+            if (gameStatusRef.current !== 'playing' || !musicOnRef.current) return;
+            bgmRef.current = startBgmLoop(ctx);
+        });
+        return () => {
+            if (bgmRef.current) {
+                bgmRef.current.stop();
+                bgmRef.current = null;
+            }
+        };
+    }, [gameStatus, musicOn]);
+
+    /**
      * 計時器控制
      */
     useEffect(() => {
@@ -432,7 +663,24 @@ export default function FindColors() {
                 timeLeftRef.current = newTime;
                 setTimeLeft(newTime);
 
+                if (newTime >= 1 && newTime <= 5 && soundOnRef.current) {
+                    const ctx = getAudioContext();
+                    if (ctx) {
+                        resumeAudio(ctx, () => {
+                            playTickSound(ctx);
+                        });
+                    }
+                }
+
                 if (newTime <= 0) {
+                    if (soundOnRef.current) {
+                        const ctx = getAudioContext();
+                        if (ctx) {
+                            resumeAudio(ctx, () => {
+                                playGameOverSound(ctx);
+                            });
+                        }
+                    }
                     setGameStatus('gameover');
                 }
             }, 1000);
@@ -461,11 +709,43 @@ export default function FindColors() {
         return () => window.removeEventListener('resize', handleResize);
     }, [gameStatus, options.length, calculateOptionSize]);
 
+    /**
+     * 切換「留縫/貼齊」時重新計算色塊尺寸
+     */
+    useEffect(() => {
+        if (gameStatus === 'playing' && options.length > 0) {
+            const size = calculateOptionSize(options.length);
+            setOptionSize(size);
+        }
+    }, [optionGap, gameStatus, options.length, calculateOptionSize]);
+
     // 計算排列
     const cols = Math.ceil(Math.sqrt(options.length));
 
     return (
-        <div className="FindColors">
+        <div className={`FindColors FindColors--bg-${backgroundMode}`}>
+            <div className="audio-controls">
+                <button
+                    type="button"
+                    className={`audio-control-btn ${musicOn ? 'is-on' : ''}`}
+                    onClick={toggleMusic}
+                    title={musicOn ? '關閉背景音樂' : '開啟背景音樂'}
+                    aria-label={musicOn ? '關閉背景音樂' : '開啟背景音樂'}
+                >
+                    <span className="audio-control-icon" aria-hidden>♪</span>
+                    <span className="audio-control-label">音樂</span>
+                </button>
+                <button
+                    type="button"
+                    className={`audio-control-btn ${soundOn ? 'is-on' : ''}`}
+                    onClick={toggleSound}
+                    title={soundOn ? '關閉音效' : '開啟音效'}
+                    aria-label={soundOn ? '關閉音效' : '開啟音效'}
+                >
+                    <span className="audio-control-icon" aria-hidden>🔊</span>
+                    <span className="audio-control-label">音效</span>
+                </button>
+            </div>
             <h1 className="title">看色</h1>
 
             <div className="status-bar">
@@ -473,7 +753,7 @@ export default function FindColors() {
                     <span className="status-label">關卡</span>
                     <span className="status-value">{level}</span>
                 </div>
-                <div className={`status-item status-item--time ${showPenalty ? 'is-penalty' : ''}`}>
+                <div className={`status-item status-item--time ${showPenalty ? 'is-penalty' : ''} ${gameStatus === 'playing' && timeLeft <= 5 ? 'is-low-time' : ''}`}>
                     <span className="status-label">剩餘時間</span>
                     <span className="status-value">{timeLeft}</span>
                     {showPenalty && <span className="penalty-text">-5</span>}
@@ -490,7 +770,7 @@ export default function FindColors() {
                     ref={answerAreaRef}
                     style={{
                         gridTemplateColumns: `repeat(${cols}, ${optionSize}px)`,
-                        gap: `${CONFIG.OPTION_GAP}px`,
+                        gap: `${gapPx}px`,
                     }}
                 >
                     {options.map((option) => (
@@ -501,6 +781,7 @@ export default function FindColors() {
                                 width: optionSize,
                                 height: optionSize,
                                 backgroundColor: rgbToCss(option.color),
+                                borderRadius: optionRounded ? 8 : 0,
                             }}
                             onClick={() => handleOptionClick(option)}
                             disabled={gameStatus !== 'playing'}
@@ -515,6 +796,7 @@ export default function FindColors() {
                             width: CONFIG.TARGET_SIZE,
                             height: CONFIG.TARGET_SIZE,
                             backgroundColor: rgbToCss(targetColor),
+                            borderRadius: optionRounded ? 8 : 0,
                         }}
                     />
                 </div>
@@ -564,6 +846,62 @@ export default function FindColors() {
                 <p className="controls-title">操作方式</p>
                 <p className="controls-text">點擊色塊選擇答案</p>
                 <p className="controls-hint">按空白鍵或 P 暫停</p>
+            </div>
+
+            <div className="difficulty-toggles">
+                <div className="toggle-group">
+                    <span className="toggle-label">背景</span>
+                    <div className="toggle-buttons">
+                        {(['black', 'white', 'gray'] as const).map((mode) => (
+                            <button
+                                key={mode}
+                                type="button"
+                                className={`toggle-btn ${backgroundMode === mode ? 'is-active' : ''}`}
+                                onClick={() => setBackgroundMode(mode)}
+                            >
+                                {mode === 'black' ? '黑' : mode === 'white' ? '白' : '灰'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="toggle-group">
+                    <span className="toggle-label">色塊圓角</span>
+                    <div className="toggle-buttons">
+                        <button
+                            type="button"
+                            className={`toggle-btn ${optionRounded ? 'is-active' : ''}`}
+                            onClick={() => setOptionRounded(true)}
+                        >
+                            圓角
+                        </button>
+                        <button
+                            type="button"
+                            className={`toggle-btn ${!optionRounded ? 'is-active' : ''}`}
+                            onClick={() => setOptionRounded(false)}
+                        >
+                            直角
+                        </button>
+                    </div>
+                </div>
+                <div className="toggle-group">
+                    <span className="toggle-label">色塊間距</span>
+                    <div className="toggle-buttons">
+                        <button
+                            type="button"
+                            className={`toggle-btn ${optionGap ? 'is-active' : ''}`}
+                            onClick={() => setOptionGap(true)}
+                        >
+                            留縫
+                        </button>
+                        <button
+                            type="button"
+                            className={`toggle-btn ${!optionGap ? 'is-active' : ''}`}
+                            onClick={() => setOptionGap(false)}
+                        >
+                            貼齊
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );

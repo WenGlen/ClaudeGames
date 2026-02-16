@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import Snake from './games/Snake/Snake';
 import FindColors from './games/FindColors/FindColors';
 import GoForward from "./games/GoForward/GoForward";
+import Campfire from "./games/Campfire/Campfire";
 import Spacecraft from "./games/Spacecraft/Spacecraft";
 
 
@@ -16,7 +17,8 @@ function App() {
   const headerNavItems = [
       { label: "貪食蛇", path: "/snake", game: Snake },
       { label: "看色", path: "/find-colors", game: FindColors },
-      { label: "向前走", path: "/go-forward", game: GoForward }
+      { label: "向前走", path: "/go-forward", game: GoForward },
+      { label: "營火", path: "/campfire", game: Campfire},
   ];
   const abandonedItems = [
       { label: "軌道飛船", path: "/spacecraft", game: Spacecraft },
